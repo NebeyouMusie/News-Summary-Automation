@@ -211,6 +211,7 @@ This project is licensed under the MIT License.
 
 - **Email:** nebeyoumusie@gmail.com
 - **LinkedIn:** [LinkedIn](https://www.linkedin.com/in/nebeyou-musie)
+- **X(Twitter):** [X](https://x.com/NebeyouMusie)
 - **Upwork:** [Upwork](https://www.upwork.com/freelancers/~017ff01729e3cd26e0?mp_source=share)
 - **My Agency:** [Fuzion Tech Website](https://fuzion-tech.com/) or [Fuzion Tech on Upwork](https://www.upwork.com/agencies/1948388369189366041/)
 
