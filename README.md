@@ -177,8 +177,7 @@ Your Airtable base should include these columns for optimal organization:
 
 - **Title**: Article headline
 - **Summary**: AI-generated summary content
-- **Source**: RSS feed name/URL
-- **URL**: Original article link
+- **Link**: Original article link
 - **Published Date**: Article publication timestamp
 - **Category**: Content classification (optional)
 - **Keywords**: Extracted key terms (optional)
