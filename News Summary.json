@@ -1,0 +1,432 @@
+{
+  "name": "News Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{ $json.feed }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        64
+      ],
+      "id": "1c728ebd-a8f9-4ad6-b30f-ae6609cf0734",
+      "name": "RSS Read"
+    },
+    {
+      "parameters": {
+        "jsCode": "return[\n  { \"json\": { \"feed\": \"https://fortune.com/feed/fortune-feeds/?id=3230629\" } },\n  { \"json\": { \"feed\": \"https://seekingalpha.com/feed.xml\" } },\n  { \"json\": { \"feed\": \"https://www.thestreet.com/.rss/full/\" } },\n  { \"json\": { \"feed\": \"http://feeds.benzinga.com/benzinga\" } },\n  { \"json\": { \"feed\": \"https://www.marketbeat.com/feed/\" } }\n]\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "221bc3e2-0b13-446c-b86e-46a3228393e8",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        160,
+        0
+      ],
+      "id": "1791472c-fd26-47d5-b482-cb8b59538e01",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ddc17ec4-34ef-43c8-add0-e61d8ba1538d",
+              "leftValue": "={{ $('RSS Read').first().json.pubDate }}\n",
+              "rightValue": "={{ DateTime.now().minus({ days: 3 }) }}\n",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        -144
+      ],
+      "id": "55aa30e0-2327-4e0d-8d92-3c771abc572b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "maxItems": 5
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -176
+      ],
+      "id": "1c821235-39b3-480f-b627-42ef187391cb",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('If').item.json.link }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        -176
+      ],
+      "id": "15f91ef3-f3aa-4272-a218-7cc0024a914d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "html": "={{ $json.data }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.markdown",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        -176
+      ],
+      "id": "e0c92eff-7afd-45e9-ae11-072133cd345d",
+      "name": "Markdown"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "b6477574-62b0-47bf-890f-a37b84185b59",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "NchtBD6sEH0vCYg4",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an intelligent summarization assistant. Your task is to extract the main body text from an article and create a detailed, focused summary of its content. Identify the key subjects, themes, and the primary topic covered by the article.\n\nRequirements for the summary:  \n- Limit the summary to no more than 1000 characters.  \n- Avoid using phrases like \"summary of article,\" \"the article discusses,\" or other filler words.  \n- Write in clear, concise language, capturing essential points and insights only.  \n- Ensure the summary is coherent, meaningful, and self-contained for someone who hasn’t read the article.\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1280,
+        -176
+      ],
+      "id": "38cad6a7-50f2-4c72-8eec-9394f7db5d2f",
+      "name": "Summarize Content"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"source_title\": \"{{ $('Limit').item.json.title.replace(/\\\"/g, '\\\\\\\"') }}\",\n  \"source_summary\": \"{{ $json.text.replace(/\\\"/g, '\\\\\\\"') }}\",\n  \"source_link\": \"{{ $('Limit').item.json.link }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1632,
+        -176
+      ],
+      "id": "11d43e62-264a-4a80-a3bd-33f68643f7e4",
+      "name": "Structure Outputs"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appMxgEXsEtcoRAwa",
+          "mode": "list",
+          "cachedResultName": "News",
+          "cachedResultUrl": "https://airtable.com/appMxgEXsEtcoRAwa"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblnlA6SEBG7MhFOA",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appMxgEXsEtcoRAwa/tblnlA6SEBG7MhFOA"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.source_title }}",
+            "Summary": "={{ $json.source_summary }}",
+            "Link": "={{ $json.source_link }}",
+            "Publish Date": "={{ $('Limit').item.json.pubDate }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        1840,
+        -176
+      ],
+      "id": "eb67b87e-dd2b-4bd0-a6d1-a28267281bb3",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "ltnUIGmNO1ebWIUt",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "aa5f26b7-deb5-4ad9-919a-ee3b01fea5e5",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown": {
+      "main": [
+        [
+          {
+            "node": "Summarize Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarize Content",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Content": {
+      "main": [
+        [
+          {
+            "node": "Structure Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Outputs": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "56091f38-8a14-4029-a96a-3894e3340e5d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "840154ca8ff3822257170e4b1910defa5b76a2ee2e5b52ef94b6628e655db31a"
+  },
+  "id": "zhyW3YKkB03dHifI",
+  "tags": []
+}
